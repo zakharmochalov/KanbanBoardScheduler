@@ -2,6 +2,8 @@
 using Microsoft.EntityFrameworkCore;
 using KanbanBoard.Data;
 using KanbanBoard.Models;
+using KanbanBoard.Jobs;
+using Hangfire;
 
 namespace KanbanBoard.Hubs
 {
@@ -54,6 +56,7 @@ namespace KanbanBoard.Hubs
 
             await Clients.All.SendAsync("CardAdded", card); 
             await Clients.Others.SendAsync("Notify", $"Новая задача «{card.Title}», автор: {card.Author}");
+            BackgroundJob.Enqueue<BoardJobs>(job => job.CardCreated(card.Id));
         }
 
         // переместить карточку в колонку
@@ -78,6 +81,8 @@ namespace KanbanBoard.Hubs
                 ? $"Задача «{card.Title}» взята в работу, исполнитель: {name}"
                 : $"Задача «{card.Title}» сменила статус с {StatusNames[oldStatus]} на {StatusNames[status]} ({name})";
             await Clients.Others.SendAsync("Notify", text);
+            if (status == "in_progress")
+                BackgroundJob.Schedule<BoardJobs>(job => job.RemindInProgress(id), BoardJobs.ReminderDelay);
         }
         
         // удалить карточку
