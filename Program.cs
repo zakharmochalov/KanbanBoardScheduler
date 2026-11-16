@@ -1,5 +1,6 @@
 using Hangfire;
 using Hangfire.Storage.SQLite;
+using KanbanBoard.Jobs;
 using Microsoft.EntityFrameworkCore;
 using KanbanBoard.Data;
 using KanbanBoard.Hubs;
@@ -42,4 +43,6 @@ app.MapControllerRoute(
 
 app.MapHub<BoardHub>("/board");
 app.UseHangfireDashboard("/hangfire");
+// периодическая задача: очистка старых готовых задач каждые 12 часов
+RecurringJob.AddOrUpdate<BoardJobs>("cleanup-done", job => job.CleanupDone(), "0 */12 * * *");
 app.Run();
